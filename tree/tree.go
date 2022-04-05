@@ -6,7 +6,11 @@ import (
 )
 
 type Node struct {
-	Sons    map[byte]*Node
+	Sons  map[byte]*Node
+	Leafs []*Leaf
+}
+
+type Leaf struct {
 	Netmask *net.IPNet
 	Data    interface{}
 }
@@ -17,7 +21,8 @@ type Trunk struct {
 
 func NewNode() *Node {
 	return &Node{
-		Sons: make(map[byte]*Node),
+		Sons:  make(map[byte]*Node),
+		Leafs: make([]*Leaf, 0),
 	}
 }
 
@@ -40,25 +45,32 @@ func (t *Trunk) Append(nm *net.IPNet, data interface{}) {
 		}
 		node = n
 	}
-	node.Netmask = nm
-	node.Data = data
+	node.Leafs = append(node.Leafs, &Leaf{
+		Netmask: nm,
+		Data:    data,
+	})
 }
 
 func (t *Trunk) Get(ip net.IP) (bool, interface{}) {
 	ip = ip.To4()
 	node := t.Node
+	cpt := 0
 	for i := 0; i < 4; i++ {
 		var ok bool
 		fmt.Println(len(node.Sons), "sons")
 		node, ok = node.Sons[ip[i]]
 		if !ok {
+			fmt.Println(cpt, "tests for failing with", ip)
 			return false, nil
 		}
-		if node.Netmask != nil {
-			if node.Netmask.Contains(ip) {
-				return true, node.Data
+		for _, leaf := range node.Leafs {
+			cpt++
+			if leaf.Netmask.Contains(ip) {
+				fmt.Println(cpt, "tests for", ip)
+				return true, leaf.Data
 			}
 		}
 	}
+	fmt.Println(cpt, "tests for failing with", ip)
 	return false, nil
 }
