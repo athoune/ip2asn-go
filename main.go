@@ -23,7 +23,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	tree := _tree.New()
+	tree, err := _tree.New(256)
+	if err != nil {
+		panic(err)
+	}
 	src := tsv.New(r)
 	cpt := 0
 	for src.Next() {
