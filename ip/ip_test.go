@@ -1,6 +1,7 @@
 package ip
 
 import (
+	"fmt"
 	"net"
 	"testing"
 
@@ -31,4 +32,12 @@ func TestIP(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, nn, &n)
 	}
+}
+
+func TestTo8(t *testing.T) {
+	a := net.IPv4(192, 168, 1, 1).To4()
+	fmt.Printf("%x %x %x %x\n", a[0], a[1], a[2], a[3])
+	aa := To8(a)
+	fmt.Printf("%x %x %x %x %x %x %x %x\n", aa[0], aa[1], aa[2], aa[3], aa[4], aa[5], aa[6], aa[7])
+	assert.Equal(t, [8]byte{0xc, 0x0, 0xa, 0x8, 0x0, 0x1, 0x0, 0x1}, aa)
 }

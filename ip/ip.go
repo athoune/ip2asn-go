@@ -34,3 +34,13 @@ func Net(a, b net.IP) net.IPNet {
 		Mask: m,
 	}
 }
+
+func To8(a net.IP) [8]byte {
+	a = a.To4()
+	r := [8]byte{}
+	for i := 0; i < 4; i++ {
+		r[i*2] = a[i] & 0xF0 / 0x10
+		r[i*2+1] = a[i] & 0x0F
+	}
+	return r
+}
