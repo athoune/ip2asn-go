@@ -23,7 +23,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	tree, err := _tree.New(1)
+	tree, err := _tree.New(256)
 	if err != nil {
 		panic(err)
 	}
@@ -61,6 +61,7 @@ func main() {
 		dt := time.Now().Sub(chrono)
 		fmt.Println(cpt, "in", dt, "=>", int64(dt)/int64(cpt)/1000, "µs")
 
+		//tree.Dump(os.Stdout)
 	} else {
 		fmt.Println("Listening 0.0.0.0:1234")
 		listen, err := net.Listen("tcp", "0.0.0.0:1234")
