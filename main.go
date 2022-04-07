@@ -23,9 +23,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	tree, err := _tree.New(256)
-	if err != nil {
-		panic(err)
+	tree := &_tree.Trunk2{
+		_tree.NewNode2(0),
 	}
 	src := tsv.New(r)
 	cpt := 0
@@ -44,7 +43,7 @@ func main() {
 		}
 	}
 
-	fmt.Println("Indexation done :", cpt)
+	fmt.Println("Indexation done :", cpt, len(tree.Sons))
 
 	if len(os.Args) == 3 {
 		f, err := os.Open(os.Args[2])
@@ -55,7 +54,13 @@ func main() {
 		chrono := time.Now()
 		cpt := 0
 		for lines.Scan() {
-			tree.Get(net.ParseIP(lines.Text()))
+			line := lines.Text()
+			fmt.Print(line)
+			v, ok := tree.Get(net.ParseIP(line))
+			if ok {
+				fmt.Println(v)
+			}
+			fmt.Println(" ko")
 			cpt++
 		}
 		dt := time.Now().Sub(chrono)
@@ -85,7 +90,7 @@ func main() {
 						continue
 					}
 					chrono := time.Now()
-					ok, data := tree.Get(net.ParseIP(line))
+					data, ok := tree.Get(net.ParseIP(line))
 					log.Printf("%v", time.Now().Sub(chrono))
 					if ok {
 						fmt.Fprintf(conn, "%s => %s\n", line, data)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sort"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -12,6 +13,84 @@ import (
 type Node struct {
 	Sons  map[byte]*Node
 	Leafs []*Leaf
+}
+
+type Node2 struct {
+	Name  byte
+	Sons  Nodes
+	Leafs []*Leaf
+}
+
+type Nodes []*Node2
+
+func (n Nodes) Len() int           { return len(n) }
+func (n Nodes) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+func (n Nodes) Less(i, j int) bool { return n[i].Name < n[j].Name }
+
+func (n *Node2) Son(a byte) *Node2 {
+	if len(n.Sons) == 0 {
+		return nil
+	}
+	r := sort.Search(len(n.Sons), func(i int) bool {
+		return n.Sons[i].Name >= a
+	})
+	if r < len(n.Sons) {
+		return n.Sons[r]
+	}
+	return nil
+}
+
+func (n *Node2) SonOrNew(a byte) *Node2 {
+	node := n.Son(a)
+	if node != nil {
+		return node
+	}
+	node = NewNode2(a)
+	n.Sons = append(n.Sons, node)
+	sort.Sort(n.Sons)
+	return node
+}
+
+type Trunk2 struct {
+	*Node2
+}
+
+func NewNode2(name byte) *Node2 {
+	return &Node2{
+		Name:  name,
+		Sons:  make(Nodes, 0),
+		Leafs: make([]*Leaf, 0),
+	}
+}
+
+func (t *Trunk2) Append(nm *net.IPNet, data interface{}) {
+	ones, _ := nm.Mask.Size()
+	node := t.Node2
+	for i := 0; i < ones/8; i++ {
+		node = node.SonOrNew(nm.IP[i])
+	}
+	node.Leafs = append(node.Leafs, &Leaf{
+		Netmask: nm,
+		Data:    data,
+	})
+}
+
+func (t *Trunk2) Get(ip net.IP) (interface{}, bool) {
+	ip = ip.To4()
+	node := t.Node2
+	for i := 0; i < 4; i++ {
+		n := node.Son(ip[i])
+		if n == nil {
+			return nil, false
+		}
+		for _, leaf := range n.Leafs {
+			if leaf.Netmask.Contains(ip) {
+				return leaf.Data, true
+			}
+		}
+		node = n
+	}
+	return nil, false
 }
 
 type Leaf struct {
