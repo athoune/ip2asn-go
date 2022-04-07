@@ -3,6 +3,9 @@ package tree
 import (
 	"fmt"
 	"net"
+	"time"
+
+	lru "github.com/hashicorp/golang-lru"
 )
 
 type Node struct {
@@ -17,6 +20,7 @@ type Leaf struct {
 
 type Trunk struct {
 	*Node
+	cache *lru.Cache
 }
 
 func NewNode() *Node {
@@ -26,12 +30,17 @@ func NewNode() *Node {
 	}
 }
 
-func New() *Trunk {
+func New(size int) (*Trunk, error) {
+	cache, err := lru.New(size)
+	if err != nil {
+		return nil, err
+	}
 	return &Trunk{
 		&Node{
 			Sons: make(map[byte]*Node),
 		},
-	}
+		cache,
+	}, nil
 }
 
 func (t *Trunk) Append(nm *net.IPNet, data interface{}) {
@@ -51,8 +60,21 @@ func (t *Trunk) Append(nm *net.IPNet, data interface{}) {
 	})
 }
 
+type response struct {
+	ok    bool
+	value interface{}
+}
+
 func (t *Trunk) Get(ip net.IP) (bool, interface{}) {
+	chrono := time.Now()
 	ip = ip.To4()
+	key := ip.String()
+	value, ok := t.cache.Get(key)
+	if ok {
+		r := value.(response)
+		fmt.Println("cache get", time.Now().Sub(chrono))
+		return r.ok, r.value
+	}
 	node := t.Node
 	cpt := 0
 	for i := 0; i < 4; i++ {
@@ -61,16 +83,19 @@ func (t *Trunk) Get(ip net.IP) (bool, interface{}) {
 		node, ok = node.Sons[ip[i]]
 		if !ok {
 			fmt.Println(cpt, "tests for failing with", ip)
+			t.cache.Add(key, response{false, nil})
 			return false, nil
 		}
 		for _, leaf := range node.Leafs {
 			cpt++
 			if leaf.Netmask.Contains(ip) {
 				fmt.Println(cpt, "tests for", ip)
+				t.cache.Add(key, response{true, leaf.Data})
 				return true, leaf.Data
 			}
 		}
 	}
 	fmt.Println(cpt, "tests for failing with", ip)
+	t.cache.Add(key, response{false, nil})
 	return false, nil
 }
