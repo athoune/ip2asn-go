@@ -9,7 +9,7 @@ import (
 
 func TestTree(t *testing.T) {
 
-	tree, err := New(0)
+	tree, err := New(1)
 	assert.NoError(t, err)
 	_, nm, err := net.ParseCIDR("192.168.1.0/24")
 	assert.NoError(t, err)

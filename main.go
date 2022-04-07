@@ -23,7 +23,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	tree, err := _tree.New(256)
+	tree, err := _tree.New(1)
 	if err != nil {
 		panic(err)
 	}
