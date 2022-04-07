@@ -23,7 +23,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	tree := &_tree.Trunk2{
+	tree := &_tree.Trunk{
 		_tree.NewNode2(0),
 	}
 	src := tsv.New(r)
