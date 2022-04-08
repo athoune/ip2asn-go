@@ -2,6 +2,7 @@ package tree
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"net"
 
@@ -113,17 +114,16 @@ type response struct {
 	value interface{}
 }
 
-/*
-func (t *Trunk2) Dump(w io.Writer) {
+func (t *Trunk) Dump(w io.Writer) {
 	dump(w, 0, t.Node)
 }
 
 func dump(w io.Writer, tabs int, node *Node) {
-	for key, son := range node.Sons {
+	for _, son := range node.Sons {
 		for i := 0; i < tabs; i++ {
 			fmt.Fprint(w, "-")
 		}
-		fmt.Fprintf(w, "%x", key)
+		fmt.Fprintf(w, "%x", son.Name)
 		for _, leaf := range son.Leafs {
 			fmt.Fprintf(w, " %v", leaf.Netmask)
 		}
@@ -131,5 +131,3 @@ func dump(w io.Writer, tabs int, node *Node) {
 		dump(w, tabs+1, son)
 	}
 }
-
-*/
