@@ -11,7 +11,6 @@ import (
 	"time"
 
 	_tree "github.com/athoune/ip2asn-go/tree"
-	"github.com/athoune/ip2asn-go/tsv"
 )
 
 func main() {
@@ -23,27 +22,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	tree := &_tree.Trunk{
-		_tree.NewNode2(0),
-	}
-	src := tsv.New(r)
-	cpt := 0
-	for src.Next() {
-		line, err := src.Values()
-		if err != nil {
-			panic(err)
-		}
-		n := line.Network()
-		//fmt.Println(n, line.ASNumber, line.CountryCode, line.ASDescription)
-		if line.ASNumber != 0 {
-			if n.IP.To4() != nil {
-				tree.Append(&n, line)
-				cpt++
-			}
-		}
-	}
+	tree := _tree.NewTrunk()
+	err = tree.FeedWithTSV(r)
 
-	fmt.Println("Indexation done :", cpt, len(tree.Sons))
+	fmt.Println("Indexation done :", tree.Size(), len(tree.Sons))
 
 	if len(os.Args) == 3 {
 		f, err := os.Open(os.Args[2])
@@ -55,12 +37,7 @@ func main() {
 		cpt := 0
 		for lines.Scan() {
 			line := lines.Text()
-			fmt.Print(line)
-			v, ok := tree.Get(net.ParseIP(line))
-			if ok {
-				fmt.Println(v)
-			}
-			fmt.Println(" ko")
+			tree.Get(net.ParseIP(line))
 			cpt++
 		}
 		dt := time.Now().Sub(chrono)
