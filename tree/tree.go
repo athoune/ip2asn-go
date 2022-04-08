@@ -57,8 +57,9 @@ func (t *Trunk) FeedWithTSV(r io.Reader) error {
 func (t *Trunk) Get(ip net.IP) (interface{}, bool) {
 	ip = ip.To4()
 	node := t.Node
+	var n *Node
 	for i := 0; i < 4; i++ {
-		n := node.Son(ip[i])
+		n = node.Son(ip[i])
 		if n == nil {
 			return nil, false
 		}
