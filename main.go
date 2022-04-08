@@ -37,11 +37,12 @@ func main() {
 		cpt := 0
 		for lines.Scan() {
 			line := lines.Text()
-			tree.Get(net.ParseIP(line))
+			value, _ := tree.Get(net.ParseIP(line))
+			fmt.Println(line, "=>", value)
 			cpt++
 		}
 		dt := time.Now().Sub(chrono)
-		fmt.Println(cpt, "in", dt, "=>", int64(dt)/int64(cpt)/1000, "µs")
+		fmt.Println(cpt, "in", dt, "=>", int64(dt)/int64(cpt), "ns")
 
 		//tree.Dump(os.Stdout)
 	} else {
