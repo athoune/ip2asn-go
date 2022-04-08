@@ -1,45 +1,38 @@
 package tree
 
 import (
-	"fmt"
+	"encoding/binary"
 	"io"
 	"net"
-	"time"
 
+	"github.com/athoune/ip2asn-go/tsv"
 	lru "github.com/hashicorp/golang-lru"
 )
 
-type Node struct {
-	Sons  map[byte]*Node
-	Leafs []*Leaf
-}
-
-type Leaf struct {
-	Netmask *net.IPNet
-	Data    interface{}
-}
-
 type Trunk struct {
 	*Node
-	cache *lru.Cache
+	size int
 }
 
-func NewNode() *Node {
-	return &Node{
-		Sons:  make(map[byte]*Node),
-		Leafs: make([]*Leaf, 0),
+func NewTrunk() *Trunk {
+	return &Trunk{
+		NewNode(0),
+		0,
 	}
 }
 
-func New(size int) (*Trunk, error) {
+type CachedTrunk struct {
+	*Trunk
+	cache *lru.Cache
+}
+
+func NewCachedTrunk(size int) (*CachedTrunk, error) {
 	cache, err := lru.New(size)
 	if err != nil {
 		return nil, err
 	}
-	return &Trunk{
-		&Node{
-			Sons: make(map[byte]*Node),
-		},
+	return &CachedTrunk{
+		NewTrunk(),
 		cache,
 	}, nil
 }
@@ -48,17 +41,71 @@ func (t *Trunk) Append(nm *net.IPNet, data interface{}) {
 	ones, _ := nm.Mask.Size()
 	node := t.Node
 	for i := 0; i < ones/8; i++ {
-		n, ok := node.Sons[nm.IP[i]]
-		if !ok {
-			n = NewNode()
-			node.Sons[nm.IP[i]] = n
-		}
-		node = n
+		node = node.SonOrNew(nm.IP[i])
 	}
 	node.Leafs = append(node.Leafs, &Leaf{
 		Netmask: nm,
 		Data:    data,
 	})
+	t.size++
+}
+
+func (t *Trunk) Size() int {
+	return t.size
+}
+
+func (t *Trunk) FeedWithTSV(r io.Reader) error {
+	src := tsv.New(r)
+	for src.Next() {
+		line, err := src.Values()
+		if err != nil {
+			return err
+		}
+		n := line.Network()
+		//fmt.Println(n, line.ASNumber, line.CountryCode, line.ASDescription)
+		if line.ASNumber != 0 {
+			if n.IP.To4() != nil {
+				t.Append(&n, line)
+			}
+		}
+	}
+	return nil
+}
+
+func (t *Trunk) Get(ip net.IP) (interface{}, bool) {
+	ip = ip.To4()
+	node := t.Node
+	var n *Node
+	for i := 0; i < 4; i++ {
+		n = node.Son(ip[i])
+		if n == nil {
+			return nil, false
+		}
+		for _, leaf := range n.Leafs {
+			if leaf.Netmask.Contains(ip) {
+				return leaf.Data, true
+			}
+		}
+		node = n
+	}
+	return nil, false
+}
+
+func (c *CachedTrunk) Get(ip net.IP) (interface{}, bool) {
+	key := binary.BigEndian.Uint32(ip.To4())
+	v, ok := c.cache.Get(key)
+	if ok {
+		vv := v.(response)
+		return vv.value, vv.ok
+	}
+	value, ok := c.Trunk.Get(ip)
+	c.cache.Add(key, response{ok, value})
+	return value, ok
+}
+
+type Leaf struct {
+	Netmask *net.IPNet
+	Data    interface{}
 }
 
 type response struct {
@@ -66,45 +113,8 @@ type response struct {
 	value interface{}
 }
 
-func (t *Trunk) Get(_ip net.IP) (bool, interface{}) {
-	chrono := time.Now()
-	_ip = _ip.To4()
-	key := _ip.String()
-	value, ok := t.cache.Get(key)
-	if ok {
-		r := value.(response)
-		fmt.Println("cache get", time.Now().Sub(chrono))
-		return r.ok, r.value
-	}
-	node := t.Node
-	cpt := 0
-	for i := 0; i < len(_ip); i++ {
-		var ok bool
-		fmt.Println(len(node.Sons), "sons")
-		node, ok = node.Sons[_ip[i]]
-		if !ok {
-			t.cache.Add(key, response{false, nil})
-			fmt.Println(cpt, "tests for failing with", _ip)
-			fmt.Println("No son", time.Now().Sub(chrono))
-			return false, nil
-		}
-		for _, leaf := range node.Leafs {
-			cpt++
-			if leaf.Netmask.Contains(_ip) {
-				t.cache.Add(key, response{true, leaf.Data})
-				fmt.Println(cpt, "tests for", _ip)
-				fmt.Println("subnet match", time.Now().Sub(chrono))
-				return true, leaf.Data
-			}
-		}
-	}
-	fmt.Println(cpt, "tests for failing with", _ip)
-	t.cache.Add(key, response{false, nil})
-	fmt.Println("out of tree", time.Now().Sub(chrono))
-	return false, nil
-}
-
-func (t *Trunk) Dump(w io.Writer) {
+/*
+func (t *Trunk2) Dump(w io.Writer) {
 	dump(w, 0, t.Node)
 }
 
@@ -121,3 +131,5 @@ func dump(w io.Writer, tabs int, node *Node) {
 		dump(w, tabs+1, son)
 	}
 }
+
+*/
