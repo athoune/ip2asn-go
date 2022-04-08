@@ -1,10 +1,12 @@
 package tree
 
 import (
+	"encoding/binary"
 	"io"
 	"net"
 
 	"github.com/athoune/ip2asn-go/tsv"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 type Trunk struct {
@@ -17,6 +19,22 @@ func NewTrunk() *Trunk {
 		NewNode(0),
 		0,
 	}
+}
+
+type CachedTrunk struct {
+	*Trunk
+	cache *lru.Cache
+}
+
+func NewCachedTrunk(size int) (*CachedTrunk, error) {
+	cache, err := lru.New(size)
+	if err != nil {
+		return nil, err
+	}
+	return &CachedTrunk{
+		NewTrunk(),
+		cache,
+	}, nil
 }
 
 func (t *Trunk) Append(nm *net.IPNet, data interface{}) {
@@ -71,6 +89,18 @@ func (t *Trunk) Get(ip net.IP) (interface{}, bool) {
 		node = n
 	}
 	return nil, false
+}
+
+func (c *CachedTrunk) Get(ip net.IP) (interface{}, bool) {
+	key := binary.BigEndian.Uint32(ip.To4())
+	v, ok := c.cache.Get(key)
+	if ok {
+		vv := v.(response)
+		return vv.value, vv.ok
+	}
+	value, ok := c.Trunk.Get(ip)
+	c.cache.Add(key, response{ok, value})
+	return value, ok
 }
 
 type Leaf struct {

@@ -55,3 +55,29 @@ func BenchmarkTree(b *testing.B) {
 		assert.True(b, ok)
 	}
 }
+
+func BenchmarkCachedTree(b *testing.B) {
+	f, err := os.Open("../ip2asn-v4.tsv.gz")
+	assert.NoError(b, err)
+	r, err := gzip.NewReader(f)
+	assert.NoError(b, err)
+	tree, err := NewCachedTrunk(256)
+	assert.NoError(b, err)
+	err = tree.FeedWithTSV(r)
+	assert.NoError(b, err)
+	freeS, err := net.LookupHost("google.fr")
+	assert.NoError(b, err)
+	var free net.IP
+	for _, f := range freeS {
+		i := net.ParseIP(f)
+		if i.To4() != nil {
+			free = i
+			break
+		}
+	}
+	assert.NotNil(b, free)
+	for i := 0; i < b.N; i++ {
+		_, ok := tree.Get(free)
+		assert.True(b, ok)
+	}
+}
