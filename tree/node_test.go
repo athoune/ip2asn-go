@@ -7,8 +7,8 @@ import (
 )
 
 func TestNode(t *testing.T) {
-	a := NewNode(0)
-	a.SonOrNew(10)
+	a := NewNode(0, false)
+	a.SonOrNew(10, false)
 	aa := a.Son(10)
 	assert.NotNil(t, aa)
 	aa = a.Son(11)

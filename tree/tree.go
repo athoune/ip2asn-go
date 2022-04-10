@@ -17,7 +17,7 @@ type Trunk struct {
 
 func NewTrunk() *Trunk {
 	return &Trunk{
-		NewNode(0),
+		NewNode(0, true),
 		0,
 	}
 }
@@ -38,11 +38,13 @@ func NewCachedTrunk(size int) (*CachedTrunk, error) {
 	}, nil
 }
 
+const numberOfFullList int = 3
+
 func (t *Trunk) Append(nm *net.IPNet, data interface{}) {
 	ones, _ := nm.Mask.Size()
 	node := t.Node
 	for i := 0; i < ones/8; i++ {
-		node = node.SonOrNew(nm.IP[i])
+		node = node.SonOrNew(nm.IP[i], i < numberOfFullList)
 	}
 	node.Leafs = append(node.Leafs, &Leaf{
 		Netmask: nm,
