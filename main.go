@@ -3,10 +3,12 @@ package main
 import (
 	"bufio"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -65,6 +67,12 @@ func main() {
 					line = strings.TrimSpace(line)
 					log.Println(line)
 					if line == "" {
+						continue
+					}
+					if line == "stat" {
+						var stats runtime.MemStats
+						runtime.ReadMemStats(&stats)
+						json.NewEncoder(conn).Encode(stats)
 						continue
 					}
 					chrono := time.Now()
