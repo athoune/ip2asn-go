@@ -3,10 +3,13 @@ package main
 import (
 	"bufio"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,7 +25,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	tree := _tree.NewTrunk()
+	depth := os.Getenv("DEPTH")
+	var d int64
+	if depth == "" {
+		d = 2
+	} else {
+		d, err = strconv.ParseInt(depth, 10, 64)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Depth", d)
+	}
+	tree := _tree.NewTrunk(int(d))
 	err = tree.FeedWithTSV(r)
 
 	fmt.Println("Indexation done :", tree.Size(), len(tree.Sons))
@@ -65,6 +79,12 @@ func main() {
 					line = strings.TrimSpace(line)
 					log.Println(line)
 					if line == "" {
+						continue
+					}
+					if line == "stat" {
+						var stats runtime.MemStats
+						runtime.ReadMemStats(&stats)
+						json.NewEncoder(conn).Encode(stats)
 						continue
 					}
 					chrono := time.Now()

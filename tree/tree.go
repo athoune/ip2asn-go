@@ -12,13 +12,15 @@ import (
 
 type Trunk struct {
 	*Node
-	size int
+	size             int
+	numberOfFullList int
 }
 
-func NewTrunk() *Trunk {
+func NewTrunk(numberOfFullList int) *Trunk {
 	return &Trunk{
-		NewNode(0),
+		NewNode(0, true),
 		0,
+		numberOfFullList,
 	}
 }
 
@@ -27,13 +29,13 @@ type CachedTrunk struct {
 	cache *lru.Cache
 }
 
-func NewCachedTrunk(size int) (*CachedTrunk, error) {
+func NewCachedTrunk(size int, numberOfFullList int) (*CachedTrunk, error) {
 	cache, err := lru.New(size)
 	if err != nil {
 		return nil, err
 	}
 	return &CachedTrunk{
-		NewTrunk(),
+		NewTrunk(numberOfFullList),
 		cache,
 	}, nil
 }
@@ -42,7 +44,7 @@ func (t *Trunk) Append(nm *net.IPNet, data interface{}) {
 	ones, _ := nm.Mask.Size()
 	node := t.Node
 	for i := 0; i < ones/8; i++ {
-		node = node.SonOrNew(nm.IP[i])
+		node = node.SonOrNew(nm.IP[i], i < t.numberOfFullList)
 	}
 	node.Leafs = append(node.Leafs, &Leaf{
 		Netmask: nm,
