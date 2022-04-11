@@ -11,7 +11,7 @@ import (
 )
 
 func TestTree2(t *testing.T) {
-	tree := NewTrunk()
+	tree := NewTrunk(2)
 	_, nm, err := net.ParseCIDR("192.168.1.0/24")
 	assert.NoError(t, err)
 	tree.Append(nm, "Hello")
@@ -36,7 +36,7 @@ func BenchmarkTree(b *testing.B) {
 	assert.NoError(b, err)
 	r, err := gzip.NewReader(f)
 	assert.NoError(b, err)
-	tree := NewTrunk()
+	tree := NewTrunk(2)
 	err = tree.FeedWithTSV(r)
 	assert.NoError(b, err)
 	freeS, err := net.LookupHost("free.fr")
@@ -61,7 +61,7 @@ func BenchmarkCachedTree(b *testing.B) {
 	assert.NoError(b, err)
 	r, err := gzip.NewReader(f)
 	assert.NoError(b, err)
-	tree, err := NewCachedTrunk(256)
+	tree, err := NewCachedTrunk(256, 2)
 	assert.NoError(b, err)
 	err = tree.FeedWithTSV(r)
 	assert.NoError(b, err)
