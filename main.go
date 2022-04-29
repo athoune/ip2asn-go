@@ -13,7 +13,8 @@ import (
 	"strings"
 	"time"
 
-	_tree "github.com/athoune/ip2asn-go/tree"
+	"github.com/athoune/ip2asn-go/tsv"
+	_tree "github.com/athoune/iptree/tree"
 )
 
 func main() {
@@ -37,7 +38,7 @@ func main() {
 		fmt.Println("Depth", d)
 	}
 	tree := _tree.NewTrunk(int(d))
-	err = tree.FeedWithTSV(r)
+	err = tsv.FeedTrunk(tree, tsv.New(r))
 
 	fmt.Println("Indexation done :", tree.Size(), len(tree.Sons))
 

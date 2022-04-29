@@ -7,7 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/athoune/ip2asn-go/ip"
+	"github.com/athoune/iptree/ip"
+	"github.com/athoune/iptree/tree"
 )
 
 type Line struct {
@@ -49,4 +50,21 @@ func (s *Source) Values() (*Line, error) {
 	v.ASNumber, err = strconv.Atoi(line[2])
 	v.network = ip.Net(v.RangeStart, v.RangeEnd)
 	return v, err
+}
+
+func FeedTrunk(t tree.Trunk, src *Source) error {
+	for src.Next() {
+		line, err := src.Values()
+		if err != nil {
+			return err
+		}
+		n := line.Network()
+		//fmt.Println(n, line.ASNumber, line.CountryCode, line.ASDescription)
+		if line.ASNumber != 0 {
+			if n.IP.To4() != nil {
+				t.Append(&n, line)
+			}
+		}
+	}
+	return nil
 }
